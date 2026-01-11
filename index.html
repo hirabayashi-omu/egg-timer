@@ -26,16 +26,15 @@ body {
 /* ===== タイマー ===== */
 #timer {
     width: var(--block-w);
-    margin: 8px auto;
-    font-size: 36px;     /* 2ステップ大きく */
-    font-weight: 900;    /* 太字 */
-    letter-spacing: 1px;
+    margin: 6px auto;
+    font-size: 26px;
+    font-weight: bold;
 }
 
 /* ===== スライダー ===== */
 #slider-wrap {
     width: var(--block-w);
-    margin: 6px auto 16px; /* パネルとの1行空白 */
+    margin: 6px auto 16px;
 }
 input[type="range"] {
     -webkit-appearance: none;
@@ -80,12 +79,12 @@ input[type="range"]::-moz-range-thumb {
     outline: 4px solid #ff9800;
 }
 
-/* ===== 操作ボタン ===== */
+/* ===== ボタン ===== */
 .controls {
     width: var(--block-w);
     display: flex;
     justify-content: space-between;
-    margin: 16px auto 12px;
+    margin: 14px auto 10px;
 }
 .controls button {
     flex: 1;
@@ -105,16 +104,13 @@ input[type="range"]::-moz-range-thumb {
 
 <body>
 
-<!-- タイマー -->
 <div id="timer">00:00</div>
 
-<!-- 卵サイズ -->
 <div id="slider-wrap">
     卵サイズ：<span id="eggLabel">55</span> mm<br>
     <input type="range" min="20" max="70" value="55" id="eggSize">
 </div>
 
-<!-- パネル -->
 <div class="grid-wrap">
 <div class="grid">
     <div class="panel" onclick="selectEgg('raw', this)">
@@ -138,7 +134,6 @@ input[type="range"]::-moz-range-thumb {
 </div>
 </div>
 
-<!-- 操作 -->
 <div class="controls">
     <button onclick="startTimer()">▶</button>
     <button onclick="pauseTimer()">Ⅱ</button>
@@ -151,10 +146,8 @@ input[type="range"]::-moz-range-thumb {
 </audio>
 
 <script>
-/* ===== 状態 ===== */
 let eggSize = 55;
 let remain = 0;
-let initialTime = 0;   // ← 初期値保持
 let timerID = null;
 let paused = false;
 
@@ -181,11 +174,10 @@ function calcTimes() {
     };
 }
 
-/* ===== パネル選択 ===== */
+/* ===== 選択 ===== */
 function selectEgg(type, el) {
     const times = calcTimes();
-    initialTime = Math.floor(times[type]); // 初期値保存
-    remain = initialTime;
+    remain = Math.floor(times[type]);
     updateTimer();
 
     document.querySelectorAll('.panel')
@@ -213,8 +205,7 @@ function pauseTimer() {
 
 function stopTimer() {
     clearInterval(timerID);
-    paused = false;
-    remain = initialTime;   // ← 初期値に戻す
+    remain = 0;
     updateTimer();
 }
 
@@ -222,12 +213,12 @@ function stopTimer() {
 function finish() {
     clearInterval(timerID);
 
-    // 音（PC / スマホ対応）
+    /* 音 */
     const alarm = document.getElementById("alarm");
     alarm.currentTime = 0;
     alarm.play().catch(()=>{});
 
-    // 振動（対応端末のみ）
+    /* 振動（対応端末） */
     if (navigator.vibrate) {
         navigator.vibrate([300, 200, 300]);
     }
