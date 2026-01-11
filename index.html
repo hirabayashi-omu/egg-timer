@@ -6,103 +6,97 @@
 <title>ゆで卵タイマー</title>
 
 <style>
+/* ===== 基準設計 ===== */
 :root {
-    --panel-w: 180px;
-    --gap-x: 12px;
-    --gap-y: 12px;
-    --block-w: calc(var(--panel-w) * 2 + var(--gap-x));
+    --base-width: 360; /* 設計基準幅(px) */
     --brown: #5a3a1a;
     --brown-light: #d2b48c;
 }
 
 body {
     margin: 0;
-    padding: 0;
+    background: #fff;
     font-family: system-ui, -apple-system, sans-serif;
-    background: #ffffff;
-    text-align: center;
+    overflow-x: hidden;
+}
+
+/* ===== スケーラ ===== */
+#scaler {
+    width: calc(var(--base-width) * 1px);
+    transform-origin: top center;
+    margin: 0 auto;
 }
 
 /* ===== タイマー ===== */
 #timer {
-    width: var(--block-w);
-    margin: 6px auto;
-    font-size: 26px;
-    font-weight: bold;
+    font-size: 56px;
+    font-weight: 900;
+    text-align: center;
+    margin: 12px 0 6px;
 }
 
 /* ===== スライダー ===== */
 #slider-wrap {
-    width: var(--block-w);
-    margin: 6px auto 16px;
+    text-align: center;
+    margin-bottom: 18px;
+    font-size: 18px;
 }
+
 input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
     width: 100%;
-    height: 8px;
-    border-radius: 4px;
+    height: 10px;
     background: var(--brown-light);
-    outline: none;
+    border-radius: 5px;
+    -webkit-appearance: none;
 }
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--brown);
-}
-input[type="range"]::-moz-range-thumb {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: var(--brown);
 }
 
 /* ===== パネル ===== */
-.grid-wrap {
-    display: flex;
+.grid {
+    display: grid;
+    grid-template-columns: 170px 170px;
+    gap: 14px;
     justify-content: center;
 }
-.grid {
-    width: var(--block-w);
-    display: grid;
-    grid-template-columns: var(--panel-w) var(--panel-w);
-    column-gap: var(--gap-x);
-    row-gap: var(--gap-y);
-}
+
 .panel img {
+    width: 170px;
     display: block;
-    width: var(--panel-w);
 }
+
 .selected img {
     outline: 4px solid #ff9800;
+    outline-offset: -4px;
 }
 
 /* ===== ボタン ===== */
 .controls {
-    width: var(--block-w);
     display: flex;
-    justify-content: space-between;
-    margin: 14px auto 10px;
+    gap: 14px;
+    margin: 18px auto;
 }
+
 .controls button {
     flex: 1;
-    margin: 0 4px;
-    font-size: 20px;
-    padding: 14px 0;
+    padding: 18px 0;
+    font-size: 22px;
     background: var(--brown);
     color: #fff;
     border: none;
-    border-radius: 10px;
-}
-.controls button:active {
-    opacity: 0.85;
+    border-radius: 12px;
 }
 </style>
 </head>
 
 <body>
+
+<div id="scaler">
 
 <div id="timer">00:00</div>
 
@@ -111,27 +105,13 @@ input[type="range"]::-moz-range-thumb {
     <input type="range" min="20" max="70" value="55" id="eggSize">
 </div>
 
-<div class="grid-wrap">
 <div class="grid">
-    <div class="panel" onclick="selectEgg('raw', this)">
-        <img src="images/01_raw.png">
-    </div>
-    <div class="panel" onclick="selectEgg('toro', this)">
-        <img src="images/02_toro.png">
-    </div>
-    <div class="panel" onclick="selectEgg('soft', this)">
-        <img src="images/03_soft.png">
-    </div>
-    <div class="panel" onclick="selectEgg('mid', this)">
-        <img src="images/04_mid.png">
-    </div>
-    <div class="panel" onclick="selectEgg('moist', this)">
-        <img src="images/05_moist.png">
-    </div>
-    <div class="panel" onclick="selectEgg('hard', this)">
-        <img src="images/06_hard.png">
-    </div>
-</div>
+    <div class="panel" onclick="selectEgg('raw', this)"><img src="images/01_raw.png"></div>
+    <div class="panel" onclick="selectEgg('toro', this)"><img src="images/02_toro.png"></div>
+    <div class="panel" onclick="selectEgg('soft', this)"><img src="images/03_soft.png"></div>
+    <div class="panel" onclick="selectEgg('mid', this)"><img src="images/04_mid.png"></div>
+    <div class="panel" onclick="selectEgg('moist', this)"><img src="images/05_moist.png"></div>
+    <div class="panel" onclick="selectEgg('hard', this)"><img src="images/06_hard.png"></div>
 </div>
 
 <div class="controls">
@@ -140,95 +120,88 @@ input[type="range"]::-moz-range-thumb {
     <button onclick="stopTimer()">■</button>
 </div>
 
-<!-- 終了音 -->
+</div>
+
 <audio id="alarm">
     <source src="alarm.mp3" type="audio/mpeg">
 </audio>
 
 <script>
+/* ===== スケール計算 ===== */
+function applyScale() {
+    const scale = window.innerWidth / 360;
+    document.getElementById("scaler").style.transform =
+        `scale(${Math.min(scale, 1.8)})`;
+}
+window.addEventListener("resize", applyScale);
+applyScale();
+
+/* ===== 状態 ===== */
 let eggSize = 55;
 let remain = 0;
-let timerID = null;
-let paused = false;
+let initial = 0;
+let id = null;
+let pause = false;
 
-/* ===== スライダー ===== */
-const sizeSlider = document.getElementById("eggSize");
-const eggLabel = document.getElementById("eggLabel");
-
-sizeSlider.oninput = () => {
-    eggSize = Number(sizeSlider.value);
-    eggLabel.textContent = eggSize;
+eggSize.oninput = () => {
+    eggLabel.textContent = eggSize.value;
 };
 
-/* ===== 凝固モデル ===== */
+/* ===== 時間モデル ===== */
 function calcTimes() {
-    const tWhite = 16.077 * Math.exp(0.0478 * eggSize);
-    const tYolk  = 37.818 * Math.exp(0.0448 * eggSize);
+    const tW = 16.077 * Math.exp(0.0478 * eggSize.value);
+    const tY = 37.818 * Math.exp(0.0448 * eggSize.value);
     return {
-        raw:   0.8 * tWhite,
-        toro:  tWhite,
-        soft:  tWhite + 0.33 * (tYolk - tWhite),
-        mid:   tWhite + 0.67 * (tYolk - tWhite),
-        moist: 0.95 * tYolk,
-        hard:  1.10 * tYolk
+        raw: 0.8 * tW,
+        toro: tW,
+        soft: tW + 0.33 * (tY - tW),
+        mid: tW + 0.67 * (tY - tW),
+        moist: 0.95 * tY,
+        hard: 1.1 * tY
     };
 }
 
-/* ===== 選択 ===== */
 function selectEgg(type, el) {
-    const times = calcTimes();
-    remain = Math.floor(times[type]);
-    updateTimer();
+    const t = calcTimes();
+    initial = Math.floor(t[type]);
+    remain = initial;
+    update();
 
     document.querySelectorAll('.panel')
         .forEach(p => p.classList.remove('selected'));
     el.classList.add('selected');
 }
 
-/* ===== タイマー制御 ===== */
 function startTimer() {
     if (remain <= 0) return;
-    clearInterval(timerID);
-    paused = false;
-    timerID = setInterval(() => {
-        if (!paused && remain > 0) {
+    clearInterval(id);
+    id = setInterval(() => {
+        if (!pause && remain > 0) {
             remain--;
-            updateTimer();
+            update();
             if (remain === 0) finish();
         }
     }, 1000);
 }
 
-function pauseTimer() {
-    paused = !paused;
-}
+function pauseTimer() { pause = !pause; }
 
 function stopTimer() {
-    clearInterval(timerID);
-    remain = 0;
-    updateTimer();
+    clearInterval(id);
+    pause = false;
+    remain = initial;
+    update();
 }
 
-/* ===== 終了処理 ===== */
 function finish() {
-    clearInterval(timerID);
-
-    /* 音 */
-    const alarm = document.getElementById("alarm");
-    alarm.currentTime = 0;
-    alarm.play().catch(()=>{});
-
-    /* 振動（対応端末） */
-    if (navigator.vibrate) {
-        navigator.vibrate([300, 200, 300]);
-    }
+    document.getElementById("alarm").play().catch(()=>{});
+    navigator.vibrate?.([300,200,300]);
 }
 
-/* ===== 表示 ===== */
-function updateTimer() {
-    const m = String(Math.floor(remain / 60)).padStart(2, '0');
-    const s = String(remain % 60).padStart(2, '0');
-    document.getElementById("timer").textContent = `${m}:${s}`;
+function update() {
+    timer.textContent =
+        String(Math.floor(remain/60)).padStart(2,'0') + ":" +
+        String(remain%60).padStart(2,'0');
 }
 </script>
 
