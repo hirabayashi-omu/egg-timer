@@ -6,47 +6,58 @@
 <title>ゆで卵タイマー</title>
 
 <style>
-/* ===== 基準設計 ===== */
+/* =========================
+   基本設計
+========================= */
 :root {
-    --base-width: 360; /* 設計基準幅(px) */
+    --base-width: 360px;
     --brown: #5a3a1a;
     --brown-light: #d2b48c;
+    --gap-x: 14px;
+    --gap-y: 16px;
 }
 
 body {
     margin: 0;
-    background: #fff;
     font-family: system-ui, -apple-system, sans-serif;
+    background: #ffffff;
     overflow-x: hidden;
 }
 
-/* ===== スケーラ ===== */
+/* =========================
+   全体スケーラ
+========================= */
 #scaler {
-    width: calc(var(--base-width) * 1px);
-    transform-origin: top center;
+    width: var(--base-width);
     margin: 0 auto;
+    transform-origin: top center;
 }
 
-/* ===== タイマー ===== */
+/* =========================
+   タイマー
+========================= */
 #timer {
-    font-size: 56px;
-    font-weight: 900;
     text-align: center;
-    margin: 12px 0 6px;
+    font-size: 64px;   /* 2段階大きく */
+    font-weight: 900; /* 太字 */
+    margin: 12px 0 10px;
 }
 
-/* ===== スライダー ===== */
+/* =========================
+   スライダー
+========================= */
 #slider-wrap {
+    width: 100%;
     text-align: center;
-    margin-bottom: 18px;
     font-size: 18px;
+    margin-bottom: 16px;
 }
 
 input[type="range"] {
     width: 100%;
     height: 10px;
+    border-radius: 6px;
     background: var(--brown-light);
-    border-radius: 5px;
     -webkit-appearance: none;
 }
 input[type="range"]::-webkit-slider-thumb {
@@ -55,41 +66,48 @@ input[type="range"]::-webkit-slider-thumb {
     height: 28px;
     border-radius: 50%;
     background: var(--brown);
+    cursor: pointer;
 }
 
-/* ===== パネル ===== */
+/* =========================
+   パネル
+========================= */
 .grid {
     display: grid;
-    grid-template-columns: 170px 170px;
-    gap: 14px;
-    justify-content: center;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-y) var(--gap-x);
+    justify-items: center;
 }
 
 .panel img {
-    width: 170px;
+    width: 160px;
     display: block;
+    border-radius: 12px;
 }
 
-.selected img {
+.panel.selected img {
     outline: 4px solid #ff9800;
     outline-offset: -4px;
 }
 
-/* ===== ボタン ===== */
+/* =========================
+   操作ボタン
+========================= */
 .controls {
     display: flex;
     gap: 14px;
-    margin: 18px auto;
+    margin: 20px 0;
 }
 
 .controls button {
     flex: 1;
     padding: 18px 0;
     font-size: 22px;
+    font-weight: bold;
     background: var(--brown);
     color: #fff;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
 }
 </style>
 </head>
@@ -102,22 +120,22 @@ input[type="range"]::-webkit-slider-thumb {
 
 <div id="slider-wrap">
     卵サイズ：<span id="eggLabel">55</span> mm<br>
-    <input type="range" min="20" max="70" value="55" id="eggSize">
+    <input id="eggSize" type="range" min="20" max="70" value="55">
 </div>
 
 <div class="grid">
-    <div class="panel" onclick="selectEgg('raw', this)"><img src="images/01_raw.png"></div>
-    <div class="panel" onclick="selectEgg('toro', this)"><img src="images/02_toro.png"></div>
-    <div class="panel" onclick="selectEgg('soft', this)"><img src="images/03_soft.png"></div>
-    <div class="panel" onclick="selectEgg('mid', this)"><img src="images/04_mid.png"></div>
-    <div class="panel" onclick="selectEgg('moist', this)"><img src="images/05_moist.png"></div>
-    <div class="panel" onclick="selectEgg('hard', this)"><img src="images/06_hard.png"></div>
+    <div class="panel" data-type="raw"><img src="images/01_raw.png"></div>
+    <div class="panel" data-type="toro"><img src="images/02_toro.png"></div>
+    <div class="panel" data-type="soft"><img src="images/03_soft.png"></div>
+    <div class="panel" data-type="mid"><img src="images/04_mid.png"></div>
+    <div class="panel" data-type="moist"><img src="images/05_moist.png"></div>
+    <div class="panel" data-type="hard"><img src="images/06_hard.png"></div>
 </div>
 
 <div class="controls">
-    <button onclick="startTimer()">▶</button>
-    <button onclick="pauseTimer()">Ⅱ</button>
-    <button onclick="stopTimer()">■</button>
+    <button id="startBtn">▶</button>
+    <button id="pauseBtn">Ⅱ</button>
+    <button id="stopBtn">■</button>
 </div>
 
 </div>
@@ -127,81 +145,122 @@ input[type="range"]::-webkit-slider-thumb {
 </audio>
 
 <script>
-/* ===== スケール計算 ===== */
+/* =========================
+   DOM取得
+========================= */
+const scaler   = document.getElementById("scaler");
+const timerEl  = document.getElementById("timer");
+const eggSize  = document.getElementById("eggSize");
+const eggLabel = document.getElementById("eggLabel");
+const panels   = document.querySelectorAll(".panel");
+const alarm    = document.getElementById("alarm");
+
+/* =========================
+   スケール（確実に拡大）
+========================= */
 function applyScale() {
     const scale = window.innerWidth / 360;
-    document.getElementById("scaler").style.transform =
-        `scale(${Math.min(scale, 1.8)})`;
+    scaler.style.transform = `scale(${Math.min(scale, 1.8)})`;
 }
 window.addEventListener("resize", applyScale);
 applyScale();
 
-/* ===== 状態 ===== */
-let eggSize = 55;
-let remain = 0;
+/* =========================
+   状態
+========================= */
 let initial = 0;
-let id = null;
-let pause = false;
+let remain  = 0;
+let paused  = false;
+let timerId = null;
 
-eggSize.oninput = () => {
+/* =========================
+   表示更新
+========================= */
+function updateTimer(sec) {
+    if (!Number.isFinite(sec)) sec = 0;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    timerEl.textContent =
+        String(m).padStart(2,'0') + ":" +
+        String(s).padStart(2,'0');
+}
+updateTimer(0);
+
+/* =========================
+   スライダー
+========================= */
+eggLabel.textContent = eggSize.value;
+eggSize.addEventListener("input", () => {
     eggLabel.textContent = eggSize.value;
-};
+});
 
-/* ===== 時間モデル ===== */
+/* =========================
+   物理モデル
+========================= */
 function calcTimes() {
-    const tW = 16.077 * Math.exp(0.0478 * eggSize.value);
-    const tY = 37.818 * Math.exp(0.0448 * eggSize.value);
+    const D = Number(eggSize.value);
+    const tW = 16.077 * Math.exp(0.0478 * D);
+    const tY = 37.818 * Math.exp(0.0448 * D);
     return {
-        raw: 0.8 * tW,
-        toro: tW,
-        soft: tW + 0.33 * (tY - tW),
-        mid: tW + 0.67 * (tY - tW),
+        raw:   0.8 * tW,
+        toro:  tW,
+        soft:  tW + 0.33 * (tY - tW),
+        mid:   tW + 0.67 * (tY - tW),
         moist: 0.95 * tY,
-        hard: 1.1 * tY
+        hard:  1.10 * tY
     };
 }
 
-function selectEgg(type, el) {
-    const t = calcTimes();
-    initial = Math.floor(t[type]);
-    remain = initial;
-    update();
+/* =========================
+   パネル選択
+========================= */
+panels.forEach(p => {
+    p.addEventListener("click", () => {
+        const type = p.dataset.type;
+        const t = calcTimes();
+        initial = Math.floor(t[type]);
+        remain  = initial;
+        paused  = false;
 
-    document.querySelectorAll('.panel')
-        .forEach(p => p.classList.remove('selected'));
-    el.classList.add('selected');
-}
+        panels.forEach(x => x.classList.remove("selected"));
+        p.classList.add("selected");
 
-function startTimer() {
+        updateTimer(remain);
+    });
+});
+
+/* =========================
+   タイマー制御
+========================= */
+document.getElementById("startBtn").onclick = () => {
     if (remain <= 0) return;
-    clearInterval(id);
-    id = setInterval(() => {
-        if (!pause && remain > 0) {
+    clearInterval(timerId);
+    timerId = setInterval(() => {
+        if (!paused && remain > 0) {
             remain--;
-            update();
+            updateTimer(remain);
             if (remain === 0) finish();
         }
     }, 1000);
-}
+};
 
-function pauseTimer() { pause = !pause; }
+document.getElementById("pauseBtn").onclick = () => {
+    paused = !paused;
+};
 
-function stopTimer() {
-    clearInterval(id);
-    pause = false;
-    remain = initial;
-    update();
-}
+document.getElementById("stopBtn").onclick = () => {
+    clearInterval(timerId);
+    paused = false;
+    remain = initial;   // ★ 初期値に戻す
+    updateTimer(remain);
+};
 
+/* =========================
+   完了通知
+========================= */
 function finish() {
-    document.getElementById("alarm").play().catch(()=>{});
+    alarm.play().catch(()=>{});
     navigator.vibrate?.([300,200,300]);
-}
-
-function update() {
-    timer.textContent =
-        String(Math.floor(remain/60)).padStart(2,'0') + ":" +
-        String(remain%60).padStart(2,'0');
 }
 </script>
 
